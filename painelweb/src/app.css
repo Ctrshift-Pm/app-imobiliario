@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-link.active {
+  background-color: #4f46e5;
+  color: white;
+}
