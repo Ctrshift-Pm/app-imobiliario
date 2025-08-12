@@ -64,25 +64,6 @@ const createTables = async () => {
     );
   `;
 
-  const alterarTabela = `
-  ALTER TABLE properties ADD COLUMN garage_spots INT NULL DEFAULT 0 AFTER area;
-  `;
-
-  const alterarTabelaWifi = `
-  ALTER TABLE properties ADD COLUMN has_wifi BOOLEAN NULL DEFAULT true AFTER garage_spots;
-  `;
-  try {
-    console.log('Alterando tabela de imóveis para adicionar coluna de vagas na garagem...');
-    await connection.query(alterarTabela);
-    console.log('Coluna de vagas na garagem adicionada com sucesso!');
-
-    console.log('Alterando tabela de imóveis para adicionar coluna de Wi-Fi...');
-    await connection.query(alterarTabelaWifi);
-    console.log('Coluna de Wi-Fi adicionada com sucesso!');
-  } catch (error) {
-    console.error('Erro ao alterar tabela de imóveis:', error);
-  }
-
   const propertyImagesTable = `
     CREATE TABLE IF NOT EXISTS property_images (
       id INT PRIMARY KEY AUTO_INCREMENT,
