@@ -56,11 +56,32 @@ const createTables = async () => {
       bedrooms INT NULL,
       bathrooms INT NULL,
       area INT NULL,
+      garage_spots INT NULL DEFAULT 0, 
+      has_wifi BOOLEAN NULL DEFAULT true,
       broker_id INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (broker_id) REFERENCES brokers(id) ON DELETE SET NULL
     );
   `;
+
+  const alterarTabela = `
+  ALTER TABLE properties ADD COLUMN garage_spots INT NULL DEFAULT 0 AFTER area;
+  `;
+
+  const alterarTabelaWifi = `
+  ALTER TABLE properties ADD COLUMN has_wifi BOOLEAN NULL DEFAULT true AFTER garage_spots;
+  `;
+  try {
+    console.log('Alterando tabela de imóveis para adicionar coluna de vagas na garagem...');
+    await connection.query(alterarTabela);
+    console.log('Coluna de vagas na garagem adicionada com sucesso!');
+
+    console.log('Alterando tabela de imóveis para adicionar coluna de Wi-Fi...');
+    await connection.query(alterarTabelaWifi);
+    console.log('Coluna de Wi-Fi adicionada com sucesso!');
+  } catch (error) {
+    console.error('Erro ao alterar tabela de imóveis:', error);
+  }
 
   const propertyImagesTable = `
     CREATE TABLE IF NOT EXISTS property_images (
@@ -69,6 +90,19 @@ const createTables = async () => {
       image_url VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+    );
+  `;
+  const salesTable = `
+    CREATE TABLE IF NOT EXISTS sales (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      property_id INT NOT NULL,
+      broker_id INT NOT NULL,
+      sale_price DECIMAL(10, 2) NOT NULL,
+      commission_rate DECIMAL(5, 2) NOT NULL DEFAULT 5.00, -- Ex: 5.00 para 5%
+      commission_amount DECIMAL(10, 2) NOT NULL,
+      sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+      FOREIGN KEY (broker_id) REFERENCES brokers(id) ON DELETE CASCADE
     );
   `;
 
@@ -87,6 +121,9 @@ const createTables = async () => {
 
     console.log('Criando tabela de imagens dos imóveis (property_images)...');
     await connection.query(propertyImagesTable);
+
+    console.log('Criando tabela de vendas (sales)...');
+    await connection.query(salesTable);
 
     const adminEmail = 'admin@imobiliaria.com';
     const adminPassword = 'admin123';

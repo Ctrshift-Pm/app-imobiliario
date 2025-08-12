@@ -38,3 +38,5 @@ export function isAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   }
   return next();
 }
+
+export default AuthRequest;

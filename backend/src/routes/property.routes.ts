@@ -1,12 +1,14 @@
-import { Router as RouterProperty } from 'express';
+import { Router } from 'express';
 import { propertyController } from '../controllers/PropertyController';
-import { authMiddleware as authMiddlewareProperty, isBroker as isBrokerProperty } from '../middlewares/auth';
+import { authMiddleware, isBroker } from '../middlewares/auth';
 
-const propertyRoutes = RouterProperty();
+const propertyRoutes = Router();
+
 propertyRoutes.get('/', propertyController.index);
 propertyRoutes.get('/:id', propertyController.show);
-propertyRoutes.post('/', authMiddlewareProperty, isBrokerProperty, propertyController.create);
-propertyRoutes.put('/:id', authMiddlewareProperty, isBrokerProperty, propertyController.update);
-propertyRoutes.delete('/:id', authMiddlewareProperty, isBrokerProperty, propertyController.delete);
+propertyRoutes.post('/', authMiddleware, isBroker, propertyController.create);
+propertyRoutes.put('/:id', authMiddleware, isBroker, propertyController.update);
+propertyRoutes.patch('/:id/status', authMiddleware, isBroker, propertyController.updateStatus); // NOVO
+propertyRoutes.delete('/:id', authMiddleware, isBroker, propertyController.delete);
 
 export default propertyRoutes;

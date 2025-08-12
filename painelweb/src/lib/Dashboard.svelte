@@ -4,14 +4,15 @@
     import Table from './Table.svelte';
     import Modal from './Modal.svelte';
     import Pagination from './Pagination.svelte';
+    import FilterControls from './FilterControls.svelte';
+    import KpiCard from './KpiCard.svelte';
     import { authToken } from './store';
     import { onMount } from 'svelte';
-    import type { Property, Broker, User } from './types';
+    import type { Property, Broker, User, View } from './types'; // Importa o tipo View
 
-    type View = 'properties' | 'brokers' | 'users';
     type DataItem = Property | Broker | User;
     
-    let activeView: View = 'properties';
+    let activeView: View = 'dashboard';
     let allData: DataItem[] = [];
     let headers: string[] = [];
     let isLoading: boolean = true;
@@ -21,35 +22,104 @@
 
     // Estado para os controlos da tabela
     let searchTerm = '';
+    let searchColumn = 'all';
     let itemsPerPage = 10;
     let currentPage = 1;
+    let totalItems = 0;
+    
+    interface Stats {
+        totalProperties: number;
+        totalBrokers: number;
+        totalUsers: number;
+    }
+    let stats: Stats | null = null;
 
     const API_URL = 'http://localhost:3333';
 
     const viewConfig = {
-        properties: { endpoint: '/properties', title: 'Gerenciamento de Imóveis', headers: ['ID', 'Título', 'Tipo', 'Status', 'Preço', 'Cidade', 'Quartos', 'Corretor ID', 'Criado em'] },
-        brokers: { endpoint: '/admin/brokers', title: 'Gerenciamento de Corretores', headers: ['ID', 'Nome', 'Email', 'CRECI', 'Criado em'] },
-        users: { endpoint: '/admin/users', title: 'Gerenciamento de Usuários', headers: ['ID', 'Nome', 'Email', 'Telefone', 'Criado em'] }
+        dashboard: { title: 'Dashboard' },
+        properties: { 
+            endpoint: '/properties', 
+            title: 'Gerenciamento de Imóveis', 
+            headers: ['ID', 'Título', 'Tipo', 'Status', 'Preço', 'Cidade', 'Corretor ID'],
+            filterOptions: [
+                { value: 'id', label: 'ID do Imóvel' },
+                { value: 'title', label: 'Título' },
+                { value: 'type', label: 'Tipo' },
+                { value: 'city', label: 'Cidade' },
+                { value: 'price_gt', label: 'Preço >' },
+                { value: 'price_lt', label: 'Preço <' },
+                { value: 'broker_id', label: 'ID do Corretor' },
+            ]
+        },
+        brokers: { 
+            endpoint: '/admin/brokers', 
+            title: 'Gerenciamento de Corretores', 
+            headers: ['ID', 'Nome', 'Email', 'CRECI', 'Criado em'],
+            filterOptions: [
+                { value: 'name', label: 'Nome' },
+                { value: 'email', label: 'Email' },
+                { value: 'creci', label: 'CRECI' },
+            ]
+        },
+        users: { 
+            endpoint: '/admin/users', 
+            title: 'Gerenciamento de Usuários', 
+            headers: ['ID', 'Nome', 'Email', 'Telefone', 'Criado em'],
+            filterOptions: [
+                { value: 'name', label: 'Nome' },
+                { value: 'email', label: 'Email' },
+                { value: 'phone', label: 'Telefone' },
+                { value: 'created_at', label: 'Data de Criação' },
+            ]
+        }
     };
 
-    async function fetchData(view: View) {
+    let debounceTimer: number;
+    async function fetchData() {
         isLoading = true;
         const token = localStorage.getItem('authToken');
         if (!token) {
             authToken.set(null);
             return;
         }
-        const config = viewConfig[view];
+        
+        if (activeView === 'dashboard') {
+            try {
+                const response = await fetch(`${API_URL}/admin/dashboard/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Falha ao buscar estatísticas');
+                stats = await response.json();
+            } catch (error) {
+                console.error(error);
+                authToken.set(null);
+            } finally {
+                isLoading = false;
+            }
+            return;
+        }
+
+        const config = viewConfig[activeView];
+        const params = new URLSearchParams({
+            page: String(currentPage),
+            limit: String(itemsPerPage),
+            search: searchTerm,
+            searchColumn: searchColumn,
+        });
+
         try {
-            const response = await fetch(`${API_URL}${config.endpoint}`, {
+            const response = await fetch(`${API_URL}${config.endpoint}?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('Falha na autenticação');
             
-            allData = await response.json();
+            const { data, total } = await response.json();
+            allData = data; // Armazena todos os dados da API
+            totalItems = total;
             headers = config.headers;
         } catch (error) {
-            console.error(`Erro ao buscar dados de ${view}:`, error);
+            console.error(`Erro ao buscar dados de ${activeView}:`, error);
             authToken.set(null);
         } finally {
             isLoading = false;
@@ -60,8 +130,9 @@
         activeView = newView;
         isSidebarOpen = false;
         searchTerm = '';
+        searchColumn = 'all';
         currentPage = 1;
-        fetchData(newView);
+        fetchData();
     }
 
     function openDeleteModal(detail: { id: number; type: string }) {
@@ -79,7 +150,11 @@
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            fetchData(activeView);
+            if (paginatedData.length === 1 && currentPage > 1) {
+                currentPage--;
+            } else {
+                fetchData();
+            }
         } catch (error) {
             console.error(`Erro ao deletar item:`, error);
         } finally {
@@ -89,21 +164,27 @@
     }
 
     onMount(() => {
-        fetchData('properties');
+        fetchData();
     });
 
-    // Lógica reativa para filtrar e paginar os dados
-    $: filteredData = allData.filter(item => {
-        if (!searchTerm) return true;
-        const term = searchTerm.toLowerCase();
-        // Pesquisa em todas as propriedades do objeto
-        return Object.values(item).some(value => 
-            String(value).toLowerCase().includes(term)
-        );
-    });
-
-    $: paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-    $: totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    let initialLoad = true;
+    $: {
+        currentPage, itemsPerPage, searchTerm, searchColumn;
+        if (initialLoad) {
+            initialLoad = false;
+        } else {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (searchTerm || itemsPerPage || searchColumn) {
+                    currentPage = 1;
+                }
+                fetchData();
+            }, 300);
+        }
+    }
+    
+    $: paginatedData = allData; // A API já retorna os dados paginados
+    $: totalPages = Math.ceil(totalItems / itemsPerPage);
 
 </script>
 
@@ -114,38 +195,36 @@
         <Header pageTitle={viewConfig[activeView].title} onToggleSidebar={() => isSidebarOpen = !isSidebarOpen} />
         
         <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
-            {#if isLoading}
-                <div class="flex justify-center items-center h-full"><p class="text-gray-500 dark:text-gray-400">A carregar dados...</p></div>
-            {:else}
-                <!-- Controlos da Tabela -->
-                <div class="mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center gap-2">
-                        <label for="items-per-page" class="text-sm font-medium text-gray-700 dark:text-gray-300">Mostrar</label>
-                        <select id="items-per-page" bind:value={itemsPerPage} class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select>
-                        <span class="text-sm text-gray-700 dark:text-gray-300">entradas</span>
+             {#if isLoading}
+                <div class="flex justify-center items-center h-full"><p class="text-gray-500 dark:text-gray-400">A carregar...</p></div>
+             {:else if activeView === 'dashboard'}
+                {#if stats}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <KpiCard title="Total de Imóveis" value={stats.totalProperties} color="blue" />
+                        <KpiCard title="Total de Corretores" value={stats.totalBrokers} color="green" />
+                        <KpiCard title="Total de Utilizadores" value={stats.totalUsers} color="yellow" />
                     </div>
-                    <div class="relative w-full md:w-auto">
-                        <input type="text" bind:value={searchTerm} placeholder="Pesquisar em tudo..." class="w-full md:w-80 pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        </span>
-                    </div>
-                </div>
-
-                <Table {headers} data={paginatedData} type={activeView.slice(0, -1)} onDelete={openDeleteModal} />
-
+                {/if}
+             {:else}
+                <FilterControls 
+                    bind:itemsPerPage
+                    bind:searchTerm
+                    bind:searchColumn
+                    filterOptions={viewConfig[activeView].filterOptions}
+                />
+                <Table 
+                    {headers} 
+                    data={paginatedData} 
+                    view={activeView}
+                    onDelete={openDeleteModal}
+                />
                 <Pagination 
-                    bind:currentPage={currentPage} 
+                    bind:currentPage
                     {totalPages} 
-                    totalItems={filteredData.length}
+                    {totalItems}
                     {itemsPerPage}
                 />
-            {/if}
+             {/if}
         </main>
     </div>
 </div>

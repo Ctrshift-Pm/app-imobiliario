@@ -1,3 +1,5 @@
+export type View = 'dashboard' | 'properties' | 'brokers' | 'users';
+
 export interface Property {
     id: number;
     title: string;

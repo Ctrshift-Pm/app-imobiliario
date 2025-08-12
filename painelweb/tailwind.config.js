@@ -5,7 +5,12 @@ export default {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'brand-green': '#00a859',
+        'brand-green-dark': '#008245',
+      }
+    },
   },
   plugins: [],
 }

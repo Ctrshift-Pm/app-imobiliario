@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { authToken, theme } from './store';
+    import { authToken } from './store';
     import ThemeToggle from './ThemeToggle.svelte';
-
-    type View = 'properties' | 'brokers' | 'users';
+    import Logo from './Logo.svelte';
+    import type { View } from './types'; // Importa o tipo View
 
     export let isOpen = false;
     export let activeView: View;
     export let onNavigate: (view: View) => void = () => {};
 </script>
-
 <!-- Overlay para mobile -->
 <div 
     class="fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity lg:hidden {isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" 
@@ -21,10 +20,17 @@
 
 <!-- Sidebar -->
 <aside class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 dark:bg-gray-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 {isOpen ? 'translate-x-0' : '-translate-x-full'}">
-    <div class="h-16 flex items-center justify-center text-2xl font-bold border-b border-gray-700 dark:border-gray-800">Imobiliária</div>
+    <div class="h-16 flex items-center justify-center gap-2 text-xl font-bold border-b border-gray-700 dark:border-gray-800">
+        <Logo className="w-8 h-8" />
+        <span>ConectImóvel</span>
+    </div>
     <nav class="flex-1 px-4 py-4 space-y-2">
-        <button class="sidebar-link w-full text-left flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors" class:active={activeView === 'properties'} on:click={() => onNavigate('properties')}>
+        <button class="sidebar-link w-full text-left flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors" class:active={activeView === 'dashboard'} on:click={() => onNavigate('dashboard')}>
             <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            Dashboard
+        </button>
+        <button class="sidebar-link w-full text-left flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors" class:active={activeView === 'properties'} on:click={() => onNavigate('properties')}>
+            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m-1 4h1m5-4h1m-1 4h1m-1-8h1m-5 8h1m-1-4h1"></path></svg>
             Imóveis
         </button>
         <button class="sidebar-link w-full text-left flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors" class:active={activeView === 'brokers'} on:click={() => onNavigate('brokers')}>
@@ -44,3 +50,4 @@
         </button>
     </div>
 </aside>
+
