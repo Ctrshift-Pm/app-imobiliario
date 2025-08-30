@@ -1,14 +1,16 @@
-export type View = 'dashboard' | 'properties' | 'brokers' | 'users';
-
 export interface Property {
     id: number;
+    code: string | null;
     title: string;
-    type: 'Casa' | 'Apartamento' | 'Terreno';
-    status: 'Disponível' | 'Negociando' | 'Vendido' | 'Alugado';
+    type: string;
+    status: string;
     price: number;
     city: string;
-    bedrooms: number;
     broker_id: number;
+    broker_name?: string;
+    sale_value?: number;
+    commission_value?: number;
+    commission_rate?: number;
     created_at: string;
 }
 
@@ -18,6 +20,7 @@ export interface Broker {
     email: string;
     creci: string;
     created_at: string;
+    property_count?: number;
 }
 
 export interface User {
@@ -27,3 +30,8 @@ export interface User {
     phone: string;
     created_at: string;
 }
+
+export type View = 'dashboard' | 'properties' | 'brokers' | 'users';
+
+export type DataItem = Property | Broker | User;
+

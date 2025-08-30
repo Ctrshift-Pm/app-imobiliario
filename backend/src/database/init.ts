@@ -61,6 +61,8 @@ const createTables = async () => {
       broker_id INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (broker_id) REFERENCES brokers(id) ON DELETE SET NULL
+      sale_value DECIMAL(12, 2) NULL,
+      commission_value DECIMAL(12, 2) NULL;
     );
   `;
 

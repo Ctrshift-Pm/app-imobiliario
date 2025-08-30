@@ -9,5 +9,9 @@ adminRoutes.delete('/users/:id', authMiddlewareAdmin, isAdminAdmin, adminControl
 adminRoutes.get('/brokers', authMiddlewareAdmin, isAdminAdmin, adminController.getAllBrokers);
 adminRoutes.delete('/brokers/:id', authMiddlewareAdmin, isAdminAdmin, adminController.deleteBroker);
 adminRoutes.delete('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.deleteProperty);
+adminRoutes.put('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.updateProperty);
+adminRoutes.get('/properties-with-brokers', authMiddlewareAdmin, isAdminAdmin, adminController.listPropertiesWithBrokers);
+adminRoutes.put('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.updateProperty);
+adminRoutes.delete('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.deleteProperty);
 
 export default adminRoutes;
