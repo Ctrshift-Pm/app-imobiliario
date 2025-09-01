@@ -71,7 +71,7 @@ class WelcomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Registar'),
+                    child: const Text('Registrar'),
                   ),
                 ],
               ),

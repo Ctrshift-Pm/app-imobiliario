@@ -14,6 +14,7 @@ class Property {
   final int? brokerId;
   final bool hasWifi; 
   final int? garageSpots;
+  final String? imageUrl; // Add this line
 
   Property({
     required this.id,
@@ -31,6 +32,7 @@ class Property {
     this.brokerId,
     required this.hasWifi,
     this.garageSpots,
+    this.imageUrl, // Add this line
   });
 
   factory Property.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class Property {
       brokerId: json['broker_id'],
       hasWifi: (json['has_wifi'] == 1 || json['has_wifi'] == true),
       garageSpots: json['garage_spots'],
+      imageUrl: json['imageUrl'], // Add this line
     );
   }
 }

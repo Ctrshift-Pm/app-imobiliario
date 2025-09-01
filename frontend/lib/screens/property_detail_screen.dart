@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/property.dart';
 import '../providers/auth_provider.dart';
 import '../providers/property_provider.dart';
+import 'package:flutter/scheduler.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   static const routeName = '/property-detail';
@@ -16,6 +17,7 @@ class PropertyDetailScreen extends StatefulWidget {
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Property property;
   final PageController _pageController = PageController();
+  late PropertyProvider _propertyProvider;
   int _currentPage = 0;
 
   final List<String> _imageUrls = [
@@ -28,7 +30,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    property = ModalRoute.of(context)!.settings.arguments as Property;
+    property = ModalRoute.of(context)!.settings.arguments
+        as Property; // Obtém a propriedade dos argumentos
   }
 
   @override
@@ -38,8 +41,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Future<void> _launchWhatsApp() async {
-    const phoneNumber = '+5562999998888'; // Número de telefone fictício
+    const phoneNumber = '+5562999998888';
     final message = 'Olá! Tenho interesse no imóvel "${property.title}".';
+    // ignore: deprecated_member_use
     final whatsappUrl = Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
     
     if (await canLaunchUrl(whatsappUrl)) {
@@ -47,12 +51,38 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     } else {
       // Mostra um erro se não conseguir abrir o WhatsApp
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
-        );
+ ScaffoldMessenger.of(context).showSnackBar(
+ const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
+ );
       }
     }
   }
+
+  void _toggleFavorite() async {
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+  
+  if (authProvider.user == null) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login para favoritar imóveis.')),
+      );
+    }
+    return;
+  }
+
+  try {
+    await propertyProvider.toggleFavoriteStatus(property.id);
+    // No need to call setState here as the Consumer will rebuild automatically
+  } catch (error) {
+    debugPrint('Erro ao favoritar/desfavoritar: $error');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao favoritar imóvel.')),
+      );
+    }
+  }
+}
 
   void _showStatusUpdateDialog() {
     showDialog(
@@ -61,6 +91,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         // Usa um StatefulWidget dentro do diálogo para gerir o estado do dropdown
         String selectedStatus = property.status;
         return StatefulBuilder(
+          // ignore: avoid_types_as_parameter_names
           builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('Alterar Status do Imóvel'),
@@ -104,6 +135,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Schedule a callback to run after the first frame is built
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      // Access the provider here
+      _propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -115,12 +156,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     return Scaffold(
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
-              onPressed: _showStatusUpdateDialog,
-              label: const Text('Editar Status'),
-              icon: const Icon(Icons.edit),
-              backgroundColor: theme.colorScheme.secondary,
-              foregroundColor: Colors.white,
-            )
+        onPressed: _showStatusUpdateDialog,
+        label: const Text('Editar Status'),
+        icon: const Icon(Icons.edit),
+        backgroundColor: theme.colorScheme.secondary,
+        foregroundColor: Colors.white,
+ )
           : FloatingActionButton.extended(
               onPressed: _launchWhatsApp,
               label: const Text('Contactar via WhatsApp'),
@@ -133,6 +174,18 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
+ actions: [
+ Consumer<PropertyProvider>(
+ builder: (context, propertyProvider, child) {
+ final isFavorited = propertyProvider.isFavorite(property.id);
+ return IconButton(
+ icon: Icon(isFavorited ? Icons.favorite : Icons.favorite_border),
+ color: isFavorited ? Colors.red : Colors.white,
+ onPressed: _toggleFavorite,
+ );
+ },
+ ),
+ ],
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -207,14 +260,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       const SizedBox(height: 12),
                       Text(property.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 18, color: Colors.grey[700]),
-                          const SizedBox(width: 4),
-                          Expanded(child: Text('${property.address}, ${property.city}', style: TextStyle(fontSize: 16, color: Colors.grey[700]))),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
                       Text('R\$ ${property.price.toStringAsFixed(2)}', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.primaryColor)),
                       const Divider(height: 48),
                       const Text('Descrição', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

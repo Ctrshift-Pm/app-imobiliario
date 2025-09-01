@@ -24,6 +24,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     'bedrooms': null,
     'bathrooms': null,
     'area': null,
+    'garage_spots': 0,
+    'has_wifi': false,
+    'video_url': '',
   };
   bool _isLoading = false;
 
@@ -46,8 +49,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       bedrooms: _formData['bedrooms'],
       bathrooms: _formData['bathrooms'],
       area: _formData['area'],
-      hasWifi: _formData['hasWifi'] ?? false,
-      garageSpots: _formData['garageSpots'],
+      garageSpots: _formData['garage_spots'],
+      hasWifi: _formData['has_wifi'],
+      imageUrl: _formData['image_url'],
     );
 
     try {
@@ -187,6 +191,37 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                     Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            decoration: const InputDecoration(labelText: 'Vagas Garagem'),
+                            keyboardType: TextInputType.number,
+                            initialValue: '0',
+                            onSaved: (value) => _formData['garage_spots'] = int.tryParse(value ?? '0') ?? 0,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: SwitchListTile(
+                            title: const Text('Wi-Fi'),
+                            value: _formData['has_wifi'],
+                            onChanged: (value) {
+                              setState(() {
+                                _formData['has_wifi'] = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'URL do Vídeo (Opcional)'),
+                      keyboardType: TextInputType.url,
+                      onSaved: (value) => _formData['video_url'] = value ?? '',
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

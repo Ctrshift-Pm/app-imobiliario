@@ -19,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     'creci': '',
   };
   bool _isLoading = false;
-  int _selectedUserTypeIndex = 0;
+  int _selectedUserTypeIndex = 0; // 0 para Cliente, 1 para Corretor
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;

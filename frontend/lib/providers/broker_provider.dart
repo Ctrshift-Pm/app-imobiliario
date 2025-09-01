@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-// Modelos de dados
 class Commission {
   final int id;
   final String propertyTitle;

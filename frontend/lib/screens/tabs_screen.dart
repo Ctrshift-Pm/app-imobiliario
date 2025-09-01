@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
-import 'favorites_screen.dart'; 
 import 'my_properties_screen.dart';
 import 'profile_screen.dart';
 
 class TabsScreen extends StatefulWidget {
-  static String routeName = '/tabs';
+  static var routeName = '/tabs';
 
   const TabsScreen({super.key});
 
@@ -26,7 +25,6 @@ class _TabsScreenState extends State<TabsScreen> {
 
     _pages = [
       {'page': const HomeScreen(), 'title': 'Início'},
-      if (userRole == 'user') {'page': const FavoritesScreen(), 'title': 'Favoritos'},
       if (userRole == 'broker') {'page': const MyPropertiesScreen(), 'title': 'Meus Imóveis'},
       {'page': const ProfileScreen(), 'title': 'Perfil'},
     ];
@@ -40,7 +38,8 @@ class _TabsScreenState extends State<TabsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userRole = Provider.of<AuthProvider>(context, listen: false).user?.role;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userRole = authProvider.user?.role;
     
     return Scaffold(
       appBar: AppBar(
@@ -63,12 +62,22 @@ class _TabsScreenState extends State<TabsScreen> {
         currentIndex: _selectedPageIndex,
         type: BottomNavigationBarType.fixed,
         items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
-          if (userRole == 'user')
-            const BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: 'Favoritos'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Início',
+          ),
           if (userRole == 'broker')
-            const BottomNavigationBarItem(icon: Icon(Icons.business_outlined), activeIcon: Icon(Icons.business), label: 'Meus Imóveis'),
-          const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Perfil'),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.business_outlined),
+              activeIcon: Icon(Icons.business),
+              label: 'Meus Imóveis',
+            ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
       ),
     );

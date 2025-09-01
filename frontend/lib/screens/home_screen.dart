@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _showFilterDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return FilterDialog(
@@ -53,18 +53,37 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0),
             child: Row(
               children: [
                 // A barra de pesquisa pode ser adicionada aqui no futuro
-                const Spacer(),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Buscar imóveis...',
+                        border: InputBorder.none,
+                        icon: Icon(Icons.search),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
                 IconButton.filled(
                   icon: const Icon(Icons.filter_list),
-                  style: IconButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                  ),
                   onPressed: _showFilterDialog,
                 ),
               ],
-            ),
+            )
           ),
           Expanded(
             child: _isLoading

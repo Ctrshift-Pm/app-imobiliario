@@ -10,10 +10,8 @@ class ThemeProvider with ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
 
-  // Carrega o tema guardado na memória do dispositivo ao iniciar a app.
   void _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    // Lê a preferência; se não existir, usa 'system' como padrão.
     final theme = prefs.getString('theme') ?? 'system';
     if (theme == 'light') {
       _themeMode = ThemeMode.light;
@@ -22,13 +20,11 @@ class ThemeProvider with ChangeNotifier {
     } else {
       _themeMode = ThemeMode.system;
     }
-    notifyListeners(); // Notifica a UI para se redesenhar com o tema correto.
+    notifyListeners();
   }
 
-  // Altera e guarda a nova preferência de tema.
   void setTheme(ThemeMode themeMode) async {
     if (_themeMode == themeMode) return;
-    
     _themeMode = themeMode;
     notifyListeners();
     

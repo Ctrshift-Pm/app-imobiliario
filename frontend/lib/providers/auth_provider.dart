@@ -74,6 +74,7 @@ class AuthProvider with ChangeNotifier {
     final storedToken = await _storage.read(key: 'authToken');
     final storedUserData = await _storage.read(key: 'userData');
     if (storedToken == null || storedUserData == null) return false;
+    
     final userData = json.decode(storedUserData);
     _token = storedToken;
     _user = User(

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'welcome_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
-  void _onIntroEnd(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('showOnboarding', false); 
+  void _onIntroEnd(BuildContext context) {
     Navigator.of(context).pushReplacementNamed(WelcomeScreen.routeName);
   }
 

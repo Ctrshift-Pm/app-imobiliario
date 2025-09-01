@@ -11,6 +11,7 @@ class FilterDialog extends StatefulWidget {
   });
 
   @override
+  // ignore: library_private_types_in_public_api
   State<FilterDialog> createState() => _FilterDialogState();
 }
 
@@ -18,8 +19,10 @@ class _FilterDialogState extends State<FilterDialog> {
   String? _type;
   String? _purpose;
   late TextEditingController _cityController;
+  late TextEditingController _neighborhoodController;
   late TextEditingController _minPriceController;
   late TextEditingController _maxPriceController;
+  String? _sortBy;
 
   @override
   void initState() {
@@ -27,13 +30,16 @@ class _FilterDialogState extends State<FilterDialog> {
     _type = widget.currentFilters['type'];
     _purpose = widget.currentFilters['purpose'];
     _cityController = TextEditingController(text: widget.currentFilters['city']);
+    _neighborhoodController = TextEditingController(text: widget.currentFilters['neighborhood']);
     _minPriceController = TextEditingController(text: widget.currentFilters['minPrice']);
     _maxPriceController = TextEditingController(text: widget.currentFilters['maxPrice']);
+    _sortBy = widget.currentFilters['sortBy'];
   }
 
   @override
   void dispose() {
     _cityController.dispose();
+    _neighborhoodController.dispose();
     _minPriceController.dispose();
     _maxPriceController.dispose();
     super.dispose();
@@ -44,8 +50,10 @@ class _FilterDialogState extends State<FilterDialog> {
     if (_type != null) filters['type'] = _type!;
     if (_purpose != null) filters['purpose'] = _purpose!;
     if (_cityController.text.isNotEmpty) filters['city'] = _cityController.text;
+    if (_neighborhoodController.text.isNotEmpty) filters['neighborhood'] = _neighborhoodController.text;
     if (_minPriceController.text.isNotEmpty) filters['minPrice'] = _minPriceController.text;
     if (_maxPriceController.text.isNotEmpty) filters['maxPrice'] = _maxPriceController.text;
+    if (_sortBy != null) filters['sortBy'] = _sortBy!;
     
     widget.onApplyFilters(filters);
     Navigator.of(context).pop();
@@ -83,7 +91,7 @@ class _FilterDialogState extends State<FilterDialog> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _type,
-                      decoration: const InputDecoration(labelText: 'Tipo'),
+                      decoration: const InputDecoration(labelText: 'Tipo de Propriedade'),
                       items: ['Casa', 'Apartamento', 'Terreno'].map((String value) {
                         return DropdownMenuItem<String>(value: value, child: Text(value));
                       }).toList(),
@@ -103,10 +111,28 @@ class _FilterDialogState extends State<FilterDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+             const SizedBox(height: 16),
               TextFormField(
                 controller: _cityController,
                 decoration: const InputDecoration(labelText: 'Cidade'),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _neighborhoodController,
+                decoration: const InputDecoration(labelText: 'Bairro'),
+              ),
+               const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _sortBy,
+                decoration: const InputDecoration(labelText: 'Ordenar por'),
+                items: ['price_asc', 'price_desc', 'relevance'].map((String value) {
+                  String label = value;
+                  if (value == 'price_asc') label = 'Menor Preço';
+                  if (value == 'price_desc') label = 'Maior Preço';
+                  if (value == 'relevance') label = 'Mais Relevantes';
+                  return DropdownMenuItem<String>(value: value, child: Text(label));
+                }).toList(),
+                onChanged: (newValue) => setState(() => _sortBy = newValue),
               ),
               const SizedBox(height: 16),
               Row(

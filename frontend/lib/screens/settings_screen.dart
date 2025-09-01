@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
+  static const routeName = '/settings';
   const SettingsScreen({super.key});
 
   @override
