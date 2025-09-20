@@ -1,8 +1,11 @@
+import 'package:conectimovel_app/screens/terms_screen.dart';
+import 'package:conectimovel_app/screens/verification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/property_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/broker_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
@@ -11,8 +14,9 @@ import 'screens/tabs_screen.dart';
 import 'screens/property_detail_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/add_property_screen.dart';
+import 'screens/settings_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
@@ -27,7 +31,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) => AuthProvider()),
         ChangeNotifierProxyProvider<AuthProvider, PropertyProvider>(
           create: (ctx) => PropertyProvider(null),
-          update: (ctx, auth, previousProperties) => PropertyProvider(auth.token),
+          update: (ctx, auth, _) => PropertyProvider(auth.token),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, BrokerProvider>(
+          create: (ctx) => BrokerProvider(null),
+          update: (ctx, auth, _) => BrokerProvider(auth.token),
         ),
         ChangeNotifierProvider(create: (ctx) => ThemeProvider()),
       ],
@@ -35,7 +43,7 @@ class MyApp extends StatelessWidget {
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'ConectImóvel',
-            debugShowCheckedModeBanner: false, // Remove a faixa de "Debug"
+            debugShowCheckedModeBanner: false,
             theme: ThemeData(
               primaryColor: const Color(0xFF00a859),
               scaffoldBackgroundColor: const Color(0xFFF5F5F5),
@@ -76,9 +84,7 @@ class MyApp extends StatelessWidget {
               ),
             ),
             themeMode: themeProvider.themeMode,
-            
             home: const OnboardingScreen(),
-            
             routes: {
               WelcomeScreen.routeName: (ctx) => const WelcomeScreen(),
               LoginScreen.routeName: (ctx) => const LoginScreen(),
@@ -86,7 +92,10 @@ class MyApp extends StatelessWidget {
               TabsScreen.routeName: (ctx) => const TabsScreen(),
               PropertyDetailScreen.routeName: (ctx) => const PropertyDetailScreen(),
               ProfileScreen.routeName: (ctx) => const ProfileScreen(),
+              SettingsScreen.routeName: (ctx) => const SettingsScreen(),
               AddPropertyScreen.routeName: (ctx) => const AddPropertyScreen(),
+              TermsScreen.routeName: (ctx) => const TermsScreen(),
+              VerificationScreen.routeName: (ctx) => const VerificationScreen(),
             },
           );
         },

@@ -13,5 +13,8 @@ adminRoutes.put('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminContr
 adminRoutes.get('/properties-with-brokers', authMiddlewareAdmin, isAdminAdmin, adminController.listPropertiesWithBrokers);
 adminRoutes.put('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.updateProperty);
 adminRoutes.delete('/properties/:id', authMiddlewareAdmin, isAdminAdmin, adminController.deleteProperty);
+adminRoutes.get('/brokers/pending', authMiddlewareAdmin, isAdminAdmin, adminController.listPendingBrokers);
+adminRoutes.patch('/brokers/:id/approve', authMiddlewareAdmin, isAdminAdmin, adminController.approveBroker);
+adminRoutes.patch('/brokers/:id/reject', authMiddlewareAdmin, isAdminAdmin, adminController.rejectBroker);
 
 export default adminRoutes;

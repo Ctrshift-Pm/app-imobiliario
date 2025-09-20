@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/logo_widget.dart'; // NOVO
 
 class LoginScreen extends StatefulWidget {
-  static String routeName = "/login";
-
+  static const routeName = '/login';
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -21,7 +21,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+    
     setState(() => _isLoading = true);
+
     try {
       final userType = _selectedUserTypeIndex == 0 ? 'user' : 'broker';
       await Provider.of<AuthProvider>(context, listen: false).login(_email, _password, userType);
@@ -33,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -41,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -52,15 +57,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  SvgPicture.asset(
-                    'assets/images/logo.svg',
-                    height: 100,
-                    colorFilter: ColorFilter.mode(theme.primaryColor, BlendMode.srcIn),
-                  ),
+                  const LogoWidget(height: 100), // CORRIGIDO
                   const SizedBox(height: 24),
-                  const Text('ConectImóvel', textAlign: TextAlign.center, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+                  const Text(
+                    'ConectImóvel',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('Encontre o seu lugar ideal.', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const Text(
+                    'Encontre o seu lugar ideal.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
                   const SizedBox(height: 48),
                   ToggleButtons(
                     isSelected: [_selectedUserTypeIndex == 0, _selectedUserTypeIndex == 1],

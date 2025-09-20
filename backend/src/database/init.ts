@@ -89,6 +89,19 @@ const createTables = async () => {
     );
   `;
 
+  const brokerDocumentsTable = `
+    CREATE TABLE IF NOT EXISTS broker_documents (
+      broker_id INT PRIMARY KEY,
+      creci_front_url VARCHAR(255) NOT NULL,
+      creci_back_url VARCHAR(255) NOT NULL,
+      selfie_url VARCHAR(255) NOT NULL,
+      status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (broker_id) REFERENCES brokers(id) ON DELETE CASCADE
+    );
+  `;
+
   try {
     console.log('Criando tabela de administradores (admins)...');
     await connection.query(adminsTable);
@@ -107,6 +120,9 @@ const createTables = async () => {
 
     console.log('Criando tabela de vendas (sales)...');
     await connection.query(salesTable);
+
+    console.log('Criando tabela de documentos dos corretores (broker_documents)...');
+    await connection.query(brokerDocumentsTable);
 
     const adminEmail = 'admin@imobiliaria.com';
     const adminPassword = 'admin123';

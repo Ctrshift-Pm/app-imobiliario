@@ -6,56 +6,77 @@ import AuthRequest from '../middlewares/auth';
 
 class BrokerController {
   async register(req: Request, res: Response) {
-    const { name, email, password, creci, address, city, state } = req.body;
-    if (!name || !email || !password || !creci) {
-      return res.status(400).json({ error: 'Nome, email, senha e CRECI são obrigatórios.' });
-    }
-    try {
-      const [existingBroker] = await connection.query('SELECT id FROM brokers WHERE email = ? OR creci = ?', [email, creci]);
-      if (Array.isArray(existingBroker) && existingBroker.length > 0) {
-        return res.status(400).json({ error: 'Este e-mail ou CRECI já está em uso.' });
-      }
-      const password_hash = await bcrypt.hash(password, 8);
-      const insertQuery = `
-        INSERT INTO brokers (name, email, password_hash, creci, address, city, state)
-        VALUES (?, ?, ?, ?, ?, ?, ?);
-      `;
-      await connection.query(insertQuery, [name, email, password_hash, creci, address, city, state]);
-      return res.status(201).json({ message: 'Corretor criado com sucesso!' });
-    } catch (error) {
-      console.error('Erro no registro do corretor:', error);
-      return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
-    }
-  }
+  const { name, email, password, creci, phone, address, city, state } = req.body;
+  
+  try {
+    // 1. Criar usuário primeiro
+    const password_hash = await bcrypt.hash(password, 8);
+    const [userResult] = await connection.query(
+      'INSERT INTO users (name, email, password_hash, phone, address, city, state) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email, password_hash, phone, address, city, state]
+    );
+    
+    const userId = (userResult as any).insertId;
 
-  async login(req: Request, res: Response) {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
-    }
-    try {
-      const [rows] = await connection.query('SELECT id, name, email, creci, password_hash FROM brokers WHERE email = ?', [email]);
-      const brokers = rows as any[];
-      if (brokers.length === 0) {
-        return res.status(401).json({ error: 'Credenciais inválidas.' });
-      }
-      const broker = brokers[0];
-      const isPasswordCorrect = await bcrypt.compare(password, broker.password_hash);
-      if (!isPasswordCorrect) {
-        return res.status(401).json({ error: 'Credenciais inválidas.' });
-      }
-      const token = jwt.sign(
-        { id: broker.id, role: 'broker' },
-        process.env.JWT_SECRET || 'default_secret',
-        { expiresIn: '1d' }
-      );
-      delete broker.password_hash;
-      return res.status(200).json({ broker, token });
-    } catch (error) {
-      console.error('Erro no login do corretor:', error);
-      return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
-    }
+    // 2. Criar broker com o MESMO ID
+    await connection.query(
+      'INSERT INTO brokers (id, creci, status) VALUES (?, ?, ?)',
+      [userId, creci, 'pending_verification']
+    );
+
+    return res.status(201).json({ message: 'Corretor registrado com sucesso!' });
+  } catch (error) {
+    console.error('Erro no registro do corretor:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
+}
+  async login(req: Request, res: Response) {
+  const { email, password } = req.body;
+  
+  try {
+    // 1. Primeiro buscar o usuário na tabela users
+    const [userRows] = await connection.query(
+      `SELECT users.id, users.name, users.email, users.password_hash, brokers.creci 
+       FROM users 
+       LEFT JOIN brokers ON users.id = brokers.id 
+       WHERE users.email = ?`,
+      [email]
+    );
+
+    const users = userRows as any[];
+    if (users.length === 0) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const user = users[0];
+
+    // 2. Verificar se é realmente um corretor
+    if (!user.creci) {
+      return res.status(401).json({ error: 'Este usuário não é um corretor.' });
+    }
+
+    // 3. Verificar senha
+    const isPasswordCorrect = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    // 4. Gerar token
+    const token = jwt.sign(
+      { id: user.id, role: 'broker' },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '1d' }
+    );
+
+    // 5. Retornar dados (sem password_hash)
+    const { password_hash, ...userWithoutPassword } = user;
+    return res.json({ broker: userWithoutPassword, token });
+
+  } catch (error) {
+    console.error('Erro no login do corretor:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+}
   
   async getMyProperties(req: AuthRequest, res: Response) {
     const brokerId = req.userId; 
@@ -72,13 +93,23 @@ class BrokerController {
         const dataQuery = `SELECT * FROM properties WHERE broker_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`;
         const [data] = await connection.query(dataQuery, [brokerId, limit, offset]);
 
-        return res.json({ data, total });
+        return res.json({
+          success: true,
+          data: data,
+          total: total,
+          page: page,
+          totalPages: Math.ceil(total / limit)
+        });
 
     } catch (error) {
         console.error(`Erro ao buscar imóveis do corretor:`, error);
-        return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+        return res.status(500).json({ 
+          success: false,
+          error: 'Ocorreu um erro inesperado no servidor.' 
+        });
     }
   }
+
   async getMyCommissions(req: AuthRequest, res: Response) {
     const brokerId = req.userId;
     try {
@@ -90,10 +121,18 @@ class BrokerController {
         ORDER BY s.sale_date DESC
       `;
       const [commissions] = await connection.query(query, [brokerId]);
-      return res.json(commissions);
+      
+      // CORREÇÃO: Padronizar formato de resposta
+      return res.json({
+        success: true,
+        data: commissions
+      });
     } catch (error) {
       console.error('Erro ao buscar comissões:', error);
-      return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Ocorreu um erro inesperado no servidor.' 
+      });
     }
   }
 
@@ -118,11 +157,114 @@ class BrokerController {
         totalProperties: (propertiesResult as any[])[0].total_properties || 0,
       };
 
-      return res.json(report);
+      // CORREÇÃO: Padronizar formato de resposta
+      return res.json({
+        success: true,
+        data: report
+      });
     } catch (error) {
       console.error('Erro ao gerar relatório de desempenho:', error);
-      return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Ocorreu um erro inesperado no servidor.' 
+      });
     }
   }
+
+  // BrokerController.ts - Mantenha apenas uploadVerificationDocs
+async uploadVerificationDocs(req: AuthRequest, res: Response) {
+  const brokerId = req.userId;
+
+  if (!brokerId) {
+    return res.status(401).json({ 
+      success: false,
+      error: 'Corretor não autenticado.' 
+    });
+  }
+
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+  if (!files.creciFront || !files.creciBack || !files.selfie) {
+    return res.status(400).json({ 
+      success: false,
+      error: 'É necessário enviar os três ficheiros.' 
+    });
+  }
+    // NOTA: Num ambiente real, aqui você faria o upload destes ficheiros
+    // para um serviço de armazenamento (AWS S3, Firebase Storage, etc.).
+    // Por agora, vamos simular os URLs com base no caminho local.
+  const creciFrontUrl = `/uploads/docs/${files.creciFront[0].filename}`;
+  const creciBackUrl = `/uploads/docs/${files.creciBack[0].filename}`;
+  const selfieUrl = `/uploads/docs/${files.selfie[0].filename}`;
+
+  try {
+    const query = `
+      INSERT INTO broker_documents (broker_id, creci_front_url, creci_back_url, selfie_url)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        creci_front_url = VALUES(creci_front_url),
+        creci_back_url = VALUES(creci_back_url),
+        selfie_url = VALUES(selfie_url),
+        status = 'pending';
+    `;
+    
+    await connection.query(query, [brokerId, creciFrontUrl, creciBackUrl, selfieUrl]);
+
+    return res.status(201).json({ 
+      success: true,
+      message: 'Documentos enviados para análise com sucesso!' 
+    });
+
+  } catch (error) {
+    console.error('Erro ao guardar documentos de verificação:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Ocorreu um erro inesperado no servidor.' 
+    });
+  }
 }
+  async saveDocumentUrls(req: AuthRequest, res: Response) {
+  const brokerId = req.userId;
+  const { creciFrontUrl, creciBackUrl, selfieUrl } = req.body as {
+    creciFrontUrl: string;
+    creciBackUrl: string;
+    selfieUrl: string;
+  };
+
+  if (!brokerId) {
+    return res.status(401).json({ 
+      success: false,
+      error: 'Corretor não autenticado.' 
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO broker_documents 
+        (broker_id, creci_front_url, creci_back_url, selfie_url, status)
+      VALUES (?, ?, ?, ?, 'pending')
+      ON DUPLICATE KEY UPDATE
+        creci_front_url = VALUES(creci_front_url),
+        creci_back_url = VALUES(creci_back_url),
+        selfie_url = VALUES(selfie_url),
+        status = 'pending',
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    
+    await connection.query(query, [brokerId, creciFrontUrl, creciBackUrl, selfieUrl]);
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'URLs dos documentos salvas com sucesso!' 
+    });
+  } catch (error) {
+    console.error('Erro ao salvar URLs dos documentos:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Ocorreu um erro inesperado no servidor.' 
+    });
+  }
+}
+}
+
 export const brokerController = new BrokerController();
