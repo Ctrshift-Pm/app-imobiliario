@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+    
 
   http: ^1.2.1
   provider: ^6.1.2
@@ -19,7 +20,7 @@ dependencies:
   video_player: ^2.8.6
   image_picker: ^1.1.1
   introduction_screen: ^3.1.12 
-
+  rive: ^0.13.4
   cupertino_icons: ^1.0.2
 
 dev_dependencies:
@@ -32,8 +33,16 @@ flutter_native_splash:
   color: "#FFFFFF"
   image: assets/images/logo_splash.png
 
+
+
 flutter:
   uses-material-design: true
-
+  fonts:
+  - family: PlayfairDisplay
+    fonts:
+      - asset: assets/fonts/PlayfairDisplay-Regular.ttf
+      - asset: assets/fonts/PlayfairDisplay-Bold.ttf
+        weight: 700
   assets:
     - assets/images/
+    - assets/rive/

@@ -29,12 +29,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final userType = _selectedUserTypeIndex == 0 ? 'user' : 'broker';
     
     try {
-      await Provider.of<AuthProvider>(context, listen: false).register(_authData, userType);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registo efetuado com sucesso! Pode agora fazer o login.'), backgroundColor: Colors.green),
+      if (userType == 'user') {
+        // Registro direto para clientes
+        await Provider.of<AuthProvider>(context, listen: false).register(_authData, userType);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registo efetuado com sucesso! Pode agora fazer o login.'), backgroundColor: Colors.green),
+          );
+          Navigator.of(context).pop(); // Volta para o ecrã de boas-vindas
+        }
+      } else {
+        // Para corretores, navegar para a tela de termos
+        Navigator.of(context).pushNamed(
+          '/terms',
+          arguments: {
+            'authData': _authData,
+            'userType': userType,
+          },
         );
-        Navigator.of(context).pop(); // Volta para o ecrã de boas-vindas
       }
     } catch (error) {
       if (mounted) {
@@ -53,7 +65,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+        title: const Text('Criar Conta'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -108,7 +124,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (_isLoading)
                   const Center(child: CircularProgressIndicator())
                 else
-                  ElevatedButton(onPressed: _submit, child: const Text('Registar')),
+                  ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Registar'),
+                  ),
               ],
             ),
           ),

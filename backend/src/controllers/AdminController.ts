@@ -258,6 +258,58 @@ async updateProperty(req: Request, res: Response) {
             return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
         }
     }
+    // AdminController.ts
+async listPendingBrokers(req: Request, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    const countQuery = `SELECT COUNT(*) as total FROM brokers WHERE status = 'pending_verification'`;
+    const [totalResult] = await connection.query(countQuery);
+    const total = (totalResult as any[])[0].total;
+
+    const dataQuery = `
+      SELECT 
+        b.id, b.name, b.email, b.creci, b.status, b.created_at,
+        bd.creci_front_url, bd.creci_back_url, bd.selfie_url
+      FROM brokers b
+      LEFT JOIN broker_documents bd ON b.id = bd.broker_id
+      WHERE b.status = 'pending_verification'
+      LIMIT ? OFFSET ?
+    `;
+    const [data] = await connection.query(dataQuery, [limit, offset]);
+
+    return res.json({ data, total });
+  } catch (error) {
+    console.error('Erro ao listar corretores pendentes:', error);
+    return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+  }
+}
+
+async approveBroker(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    await connection.query('UPDATE brokers SET status = ? WHERE id = ?', ['verified', id]);
+    return res.status(200).json({ message: 'Corretor aprovado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao aprovar corretor:', error);
+    return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+  }
+}
+
+async rejectBroker(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    await connection.query('UPDATE brokers SET status = ? WHERE id = ?', ['rejected', id]);
+    return res.status(200).json({ message: 'Corretor rejeitado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao rejeitar corretor:', error);
+    return res.status(500).json({ error: 'Ocorreu um erro inesperado no servidor.' });
+  }
+}
 }
 
 export const adminController = new AdminController();

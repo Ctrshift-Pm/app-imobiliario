@@ -1,3 +1,5 @@
+import 'package:conectimovel_app/screens/terms_screen.dart';
+import 'package:conectimovel_app/screens/verification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -92,6 +94,8 @@ class MyApp extends StatelessWidget {
               ProfileScreen.routeName: (ctx) => const ProfileScreen(),
               SettingsScreen.routeName: (ctx) => const SettingsScreen(),
               AddPropertyScreen.routeName: (ctx) => const AddPropertyScreen(),
+              TermsScreen.routeName: (ctx) => const TermsScreen(),
+              VerificationScreen.routeName: (ctx) => const VerificationScreen(),
             },
           );
         },

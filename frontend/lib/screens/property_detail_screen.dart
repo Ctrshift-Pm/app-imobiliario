@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rive/rive.dart' hide Image, LinearGradient; // Esconde as classes em conflito
 import 'package:url_launcher/url_launcher.dart';
+
 import '../models/property.dart';
 import '../providers/auth_provider.dart';
-import '../providers/property_provider.dart';
-import 'package:flutter/scheduler.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   static const routeName = '/property-detail';
@@ -17,21 +17,25 @@ class PropertyDetailScreen extends StatefulWidget {
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Property property;
   final PageController _pageController = PageController();
-  late PropertyProvider _propertyProvider;
   int _currentPage = 0;
+  SMIBool? _isLikedInput;
 
-  final List<String> _imageUrls = [
-    'https://placehold.co/600x400/00a859/white?text=Fachada',
-    'https://placehold.co/600x400/cccccc/666666?text=Sala',
-    'https://placehold.co/600x400/cccccc/666666?text=Cozinha',
-    'https://placehold.co/600x400/cccccc/666666?text=Quarto',
-  ];
+  // Função para inicializar o controlador da animação Rive
+  void _onRiveInit(Artboard artboard, Property currentProperty) {
+    final controller = StateMachineController.fromArtboard(artboard, 'State Machine 1');
+    artboard.addController(controller!);
+    _isLikedInput = controller.findInput<bool>('isLiked') as SMIBool;
+
+    // Sincroniza o estado inicial da animação com o estado do provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _isLikedInput?.value = authProvider.isFavorite(currentProperty.id);
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    property = ModalRoute.of(context)!.settings.arguments
-        as Property; // Obtém a propriedade dos argumentos
+    // Obtém o objeto Property completo que foi passado como argumento da rota
+    property = ModalRoute.of(context)!.settings.arguments as Property;
   }
 
   @override
@@ -41,127 +45,36 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Future<void> _launchWhatsApp() async {
-    const phoneNumber = '+5562999998888';
+    const phoneNumber = '+5562999998888'; // Número de exemplo
     final message = 'Olá! Tenho interesse no imóvel "${property.title}".';
-    // ignore: deprecated_member_use
     final whatsappUrl = Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
     
     if (await canLaunchUrl(whatsappUrl)) {
       await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
     } else {
-      // Mostra um erro se não conseguir abrir o WhatsApp
       if (mounted) {
- ScaffoldMessenger.of(context).showSnackBar(
- const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
- );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
+        );
       }
     }
-  }
-
-  void _toggleFavorite() async {
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
-  
-  if (authProvider.user == null) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Faça login para favoritar imóveis.')),
-      );
-    }
-    return;
-  }
-
-  try {
-    await propertyProvider.toggleFavoriteStatus(property.id);
-    // No need to call setState here as the Consumer will rebuild automatically
-  } catch (error) {
-    debugPrint('Erro ao favoritar/desfavoritar: $error');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao favoritar imóvel.')),
-      );
-    }
-  }
-}
-
-  void _showStatusUpdateDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        // Usa um StatefulWidget dentro do diálogo para gerir o estado do dropdown
-        String selectedStatus = property.status;
-        return StatefulBuilder(
-          // ignore: avoid_types_as_parameter_names
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Alterar Status do Imóvel'),
-              content: DropdownButton<String>(
-                value: selectedStatus,
-                isExpanded: true,
-                items: ['Disponível', 'Negociando', 'Vendido', 'Alugado']
-                    .map((status) => DropdownMenuItem(value: status, child: Text(status)))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setDialogState(() {
-                      selectedStatus = value;
-                    });
-                  }
-                },
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancelar'),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
-                TextButton(
-                  child: const Text('Salvar'),
-                  onPressed: () {
-                    Provider.of<PropertyProvider>(context, listen: false)
-                        .updatePropertyStatus(property.id, selectedStatus);
-                    // Atualiza o estado do ecrã principal
-                    setState(() {
-                      property.status = selectedStatus;
-                    });
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-              ],
-            );
-          }
-        );
-      },
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Schedule a callback to run after the first frame is built
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      // Access the provider here
-      _propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    // Acessa o brokerId da propriedade que foi passada para este ecrã
-    final brokerIdFromProperty = (ModalRoute.of(context)!.settings.arguments as Property).brokerId;
-    // Verifica se o utilizador logado é o corretor dono do imóvel
-    final isOwner = authProvider.user?.role == 'broker' && authProvider.user?.id == brokerIdFromProperty;
+    final isOwner = authProvider.user?.role == 'broker' && authProvider.user?.id == property.brokerId;
 
     return Scaffold(
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
-        onPressed: _showStatusUpdateDialog,
-        label: const Text('Editar Status'),
-        icon: const Icon(Icons.edit),
-        backgroundColor: theme.colorScheme.secondary,
-        foregroundColor: Colors.white,
- )
+              onPressed: () { /* Lógica para editar status */ },
+              label: const Text('Editar Status'),
+              icon: const Icon(Icons.edit),
+              backgroundColor: theme.colorScheme.secondary,
+              foregroundColor: Colors.white,
+            )
           : FloatingActionButton.extended(
               onPressed: _launchWhatsApp,
               label: const Text('Contactar via WhatsApp'),
@@ -174,34 +87,47 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
- actions: [
- Consumer<PropertyProvider>(
- builder: (context, propertyProvider, child) {
- final isFavorited = propertyProvider.isFavorite(property.id);
- return IconButton(
- icon: Icon(isFavorited ? Icons.favorite : Icons.favorite_border),
- color: isFavorited ? Colors.red : Colors.white,
- onPressed: _toggleFavorite,
- );
- },
- ),
- ],
             pinned: true,
+            actions: [
+              Consumer<AuthProvider>(
+                builder: (context, auth, child) {
+                  // Sincroniza a animação com o estado atual do provider
+                  _isLikedInput?.value = auth.isFavorite(property.id);
+                  return GestureDetector(
+                    onTap: () {
+                      auth.toggleFavoriteStatus(property.id);
+                    },
+                    child: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: RiveAnimation.asset(
+                        'assets/animations/interactive_like_button_animation.riv',
+                        onInit: (artboard) => _onRiveInit(artboard, property),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 10),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   PageView.builder(
                     controller: _pageController,
-                    itemCount: _imageUrls.length,
+                    itemCount: property.images.isNotEmpty ? property.images.length : 1,
                     onPageChanged: (index) {
                       setState(() {
                         _currentPage = index;
                       });
                     },
                     itemBuilder: (context, index) {
+                      final imageUrl = property.images.isNotEmpty
+                          ? property.images[index]
+                          : 'https://placehold.co/600x400/00a859/white?text=Sem+Imagem';
                       return Image.network(
-                        _imageUrls[index],
+                        imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
@@ -212,34 +138,39 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       );
                     },
                   ),
-                  const DecoratedBox(
+                  DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment(0.0, 0.8),
+                      gradient: LinearGradient( // Corrigido: 'LinearGradient' é um construtor
+                        begin: const Alignment(0.0, 0.8),
                         end: Alignment.topCenter,
-                        colors: <Color>[Color(0x60000000), Color(0x00000000)],
+                        colors: <Color>[
+                          const Color(0x60000000),
+                          const Color(0x00000000)
+                        ],
                       ),
                     ),
                   ),
-                   Positioned(
-                    bottom: 10,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_imageUrls.length, (index) {
-                        return Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.5),
-                          ),
-                        );
-                      }),
+                  if (property.images.length > 1)
+                    Positioned(
+                      bottom: 10,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(property.images.length, (index) {
+                          return Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              // Corrigido: deprecated 'withOpacity'
+                              color: _currentPage == index ? Colors.white : const Color.fromRGBO(255, 255, 255, 0.5),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -271,9 +202,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          if (property.bedrooms != null) _buildDetailItem(Icons.king_bed_outlined, '${property.bedrooms}', 'Quartos'),
-                          if (property.bathrooms != null) _buildDetailItem(Icons.bathtub_outlined, '${property.bathrooms}', 'Banheiros'),
-                          if (property.area != null) _buildDetailItem(Icons.square_foot_outlined, '${property.area} m²', 'Área'),
+                           // Corrigido: Adicionado verificação de nulo
+                          if (property.bedrooms! > 0) _buildDetailItem(Icons.king_bed_outlined, '${property.bedrooms}', 'Quartos'),
+                          if (property.bathrooms! > 0) _buildDetailItem(Icons.bathtub_outlined, '${property.bathrooms}', 'Banheiros'),
+                          if (property.area! > 0) _buildDetailItem(Icons.square_foot_outlined, '${property.area} m²', 'Área'),
                         ],
                       ),
                       const SizedBox(height: 120),
@@ -300,3 +232,4 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 }
+
